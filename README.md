@@ -55,8 +55,6 @@ indistinguishability. A3's only edge — fewer hallucinated fixtures
 metric confound was fixed (below). This replicates across both repos and across
 single-shot example-conditioning variants. **It is an honest negative result.**
 
-![Per-commit maintainer-intent alignment, A1 vs A3](reports/figures/failfast3-A1A3_alignment.png)
-
 ---
 
 ## Why this is a *useful* null, not a boring one
@@ -78,6 +76,12 @@ This is a falsifiable hypothesis with a concrete prediction:
   should widen, because the model fabricates symbols it can't have memorized and a
   tool that *enumerates the real surface* does something grep structurally cannot —
   **you can't grep for a name you don't know exists.**
+
+![Repo-aware tool taste advantage by codebase: measured null on dbt/pydantic, projected gain on unseen code](reports/figures/taste-by-codebase.png)
+
+*The two open-source bars are **measured** in this study (no gain). The
+unseen-code bar is **projected from the mechanism** — illustrative, not measured
+here — and is exactly the regime the prediction targets.*
 
 The practical implication for the field: **public benchmarks (SWE-bench and
 friends) likely *understate* the value of repo-aware tooling, because the model
