@@ -1,0 +1,25 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Project data & outputs (large / reproducible — not version-controlled)
+data/repos/
+data/commits/
+data/graph/
+results/
+taste-ratings.db
+
+# Secret-scan guard: never commit a real key
+*.env
+!.env.example
+
+# OS
+.DS_Store

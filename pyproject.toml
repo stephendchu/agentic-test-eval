@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentic-test-writer"
+version = "0.0.1"
+description = "Repository-aware test generation: does giving Claude custom semantic MCP tools beat generic grep at writing repo-native tests?"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Stephen Chu" }]
+dependencies = [
+    "anthropic>=0.40",      # Claude API + tool use
+    "mcp>=1.0",             # Model Context Protocol server for the Treatment tools
+    "gitpython>=3.1",       # commit extraction / history mining
+    "pyyaml>=6.0",          # experiment configs
+    "python-dotenv>=1.0",   # load ANTHROPIC_API_KEY from .env
+    "numpy>=1.26",
+    "scipy>=1.11",          # paired tests, bootstrap CIs
+    "matplotlib>=3.8",      # report figures
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.5"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/atw"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
