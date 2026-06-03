@@ -95,6 +95,33 @@ training) is the natural follow-up.
 
 ---
 
+## When do these tools pay off? (discussion)
+
+The null is a **boundary condition**, not "tools don't work":
+
+- **Familiarity explains it.** The model already knows these repos' vocabulary and
+  conventions — they're in its training data — so a tool that surfaces real
+  helpers or examples is redundant. The contamination control removes the specific
+  memorized *test*, but not the memorized *language*. (The proof it's familiarity
+  and not ineffectiveness: the same kind of tool helps on code the model has
+  **not** seen — see the prediction above.)
+- **The advantage belongs to unseen code, and it's durable while the code stays
+  private.** Running a model on a repo is *inference*, not training — it doesn't
+  learn your codebase by being used on it. So the gap persists as long as the code
+  stays out of the training set; the day it goes public, future models memorize it
+  and the gap decays (exactly what's happened for dbt/pydantic).
+- **Two failure modes, two tools — floor and ceiling.** A *helper-catalog* tool
+  enumerates the real vocabulary so the agent can't fabricate names → the **floor**
+  (code that *runs*). An *example-retrieval* tool (findtests) supplies real test
+  bodies so the output matches the repo's patterns → the **ceiling**
+  (code that's *drop-in / mergeable*). They target different problems: on familiar
+  code both are redundant; on unseen code the catalog stops crashes and the
+  examples are what actually make a test deliverable.
+- **Open question.** As base models get better at in-context exploration (reading
+  the repo via grep themselves), the floor may matter less even on unseen code.
+  The ceiling — matching a codebase's idioms closely enough to merge as-is — is
+  plausibly the more durable need. This is testable and not yet settled.
+
 ## The methodological core (the real contribution)
 
 The result matters less than how it was obtained. Three things make it credible:
