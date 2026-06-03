@@ -79,9 +79,12 @@ This is a falsifiable hypothesis with a concrete prediction:
 
 ![Repo-aware tool taste advantage by codebase: measured null on dbt/pydantic, projected gain on unseen code](reports/figures/taste-by-codebase.png)
 
-*The two open-source bars are **measured** in this study (no gain). The
-unseen-code bar is **projected from the mechanism** — illustrative, not measured
-here — and is exactly the regime the prediction targets.*
+*Measured on **one identical taste rubric** (idiomatic / completeness / clarity /
+robustness / drop-in, 0/1/2, /10; n=12 each). Every repo-aware lever — co-mod (C),
+findtests (F), helper-catalog (H) — lands within noise of vanilla on both repos
+(helper-catalog is actually negative on dbt). The unseen-code bar is **projected
+from the mechanism**, not measured here; the realistic unseen case is measured
+privately in production.*
 
 The practical implication for the field: **public benchmarks (SWE-bench and
 friends) likely *understate* the value of repo-aware tooling, because the model
@@ -96,13 +99,21 @@ training) is the natural follow-up.
 
 The result matters less than how it was obtained. Three things make it credible:
 
-### 1. Human-free "taste" evaluation
-Rather than recruiting engineers to rate test *taste*, the repository's own
-**merged** tests serve as revealed human acceptance (git history as the panel).
-We measure **indistinguishability**: a blind judge tries to tell the generated
-test from the real merged one. A low distinguish-rate = native taste. This both
-scores nativeness and **self-validates the judge** (it must recover real merged
-tests over generic ones) — with large n and full reproducibility, no human labels.
+### 1. Human-free taste evaluation — and how it evolved
+No human raters. **First approach:** use the repository's own **merged** tests as
+a revealed-acceptance panel (git history) and measure **indistinguishability** — a
+blind judge tries to tell the generated test from the real merged one.
+**Why we switched:** indistinguishability needs each repo's merged ground truth
+and isn't comparable *across* codebases. To put every codebase on **one ruler**,
+we adopted a **frozen 5-axis taste rubric** — *idiomatic match, completeness,
+clarity, robustness, drop-in readiness*, each scored 0/1/2 (max 10) — graded by
+**blind LLM judge agents**. The same instrument runs on every codebase, so taste
+scores are directly comparable. A companion **structural rubric** scores
+correctness (does the test reference real symbols and resolve?). Both rubrics are
+AI-designed, shipped in this repo
+([`taste_rubric.py`](src/atw/metrics/taste_rubric.py),
+[`resolvability.py`](src/atw/metrics/resolvability.py)), and fully reproducible —
+no human labels.
 
 ### 2. Most of the early "signal" was apparatus error — and was caught
 The comparison only became trustworthy after fixing silent failures, each found

@@ -1,9 +1,9 @@
-"""A 5-axis taste rubric for test quality.
+"""5-axis taste rubric for test quality (idiomatic / completeness / clarity /
+robustness / drop-in readiness), each axis 0/1/2, per-draft total 0-10.
 
-Reference-free, per-draft, blind grading on the axes that separate good tests
-from bad ones — more granular than a single pairwise "which is better?". Each
-axis 0 / 0.5 / 1; per-draft total 0-5. Run per arm/condition to see WHERE each
-wins (e.g. A3 may win drop_in_ready but lose helper_fit).
+Reference-free, per-draft, blind grading. This is the SAME instrument across
+every codebase (open-source and obfuscated), so taste scores are directly
+comparable on one ruler — which is what makes the cross-codebase claim valid.
 """
 
 from __future__ import annotations
@@ -11,11 +11,11 @@ from __future__ import annotations
 from atw.metrics.behavioral import _claude_json, _extract_json
 
 JUDGE_MODEL = "claude-sonnet-4-6"
-AXES = ["helper_fit", "no_handwaving", "low_noise", "conciseness", "drop_in_ready"]
+AXES = ["idiomatic_match", "completeness", "clarity", "robustness", "drop_in_readiness"]
 
 TASTE_PROMPT = """You are a senior engineer reviewing a pytest test draft written \
-for the code change below. Grade ONLY the test, on five axes, each scored 0, 0.5, \
-or 1. Judge blind — do not assume it is AI- or human-written.
+for the code change below. Grade ONLY the test, on five axes, each scored 0, 1, \
+or 2. Judge blind — do not assume it is AI- or human-written.
 
 <change>
 {diff}
@@ -25,20 +25,21 @@ or 1. Judge blind — do not assume it is AI- or human-written.
 {test}
 </test>
 
-Axes:
-- helper_fit: the fixtures/helpers it uses are real AND the right ones for THIS \
-scenario (1); real but a suboptimal choice (0.5); wrong or missing (0).
-- no_handwaving: no TODO/placeholder punts on the hard parts (1); minor (0.5); \
-punts on the substance (0).
-- low_noise: no leftover setUp/tearDown boilerplate, redundant assertions, or \
-unused imports (1); some (0.5); noisy (0).
-- conciseness: tight signal-to-noise, no repetition (1); acceptable (0.5); \
-bloated (0).
-- drop_in_ready: would run and merge essentially as-is (1); needs a minor \
-reviewer pass (0.5); needs real rework (0).
+Axes (0/1/2):
+- idiomatic_match: uses this repo's conventions — the right helpers, fixtures, \
+decorators and patterns, matching neighboring tests (2); minor variance / a \
+suboptimal-but-real choice (1); wrong, non-idiomatic, or invented (0).
+- completeness: verifies the change including secondary assertions and effects \
+(2); skips a secondary assertion (1); misses the substance of the change (0).
+- clarity: clear intent, well-structured, readable (2); acceptable (1); \
+confusing or disorganized (0).
+- robustness: probes the implied edge cases of the change (2); under-probes some \
+(1); happy-path only (0).
+- drop_in_readiness: would merge as-is, no TODOs/placeholders (2); minor TODOs or \
+platform-specific values to fill in (1); needs real rework (0).
 
-Respond with ONLY JSON: {{"helper_fit":0/0.5/1, "no_handwaving":0/0.5/1, \
-"low_noise":0/0.5/1, "conciseness":0/0.5/1, "drop_in_ready":0/0.5/1, "reason":"<one line>"}}"""
+Respond with ONLY JSON: {{"idiomatic_match":0/1/2, "completeness":0/1/2, \
+"clarity":0/1/2, "robustness":0/1/2, "drop_in_readiness":0/1/2, "reason":"<one line>"}}"""
 
 
 def taste_score(diff: str, test: str, model: str = JUDGE_MODEL) -> dict:
