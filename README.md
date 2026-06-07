@@ -1,5 +1,8 @@
 # Do repo-aware tools help a coding agent write tests?
 
+> **🔎 Validate** · part 1 of a 3-part series on measuring & governing AI in regulated domains —
+> **Validate (here)** · [📊 Measure](https://github.com/stephendchu/filing-event-eval) · [🛡 Govern](https://github.com/stephendchu/assay)
+
 **A controlled, contamination-aware study of semantic retrieval tools vs. generic
 grep for agentic test generation.**
 
