@@ -1,228 +1,151 @@
-# Do repo-aware tools help a coding agent write tests?
+# agentic-test-eval
 
-> **🔎 Validate** · part 1 of a 3-part series on measuring & governing AI in regulated domains —
-> **Validate (here)** · [📊 Measure](https://github.com/stephendchu/filing-event-eval) · [🛡 Govern](https://github.com/stephendchu/assay)
+> **Can a semantic retrieval tool help an AI agent write better tests — and when does it matter?**
 
-**A controlled, contamination-aware study of semantic retrieval tools vs. generic
-grep for agentic test generation.**
-
-Stephen Chu · 2026
-
-> **One-line result:** giving a coding agent custom, repo-aware retrieval tools
-> did **not** beat the same agent with generic `grep`/`read`/`bash` on two
-> well-known open-source repos — and there's a principled reason to expect that
-> *specifically* on open-source code, which is the interesting part.
+A controlled study of repository-aware test generation across three open-source Python codebases. Built to answer an honest question: does a custom tool that understands a repo's test history actually help, or does grep do the job just as well?
 
 ---
 
-## The question
+## The one-line finding
 
-Coding agents write tests by exploring a repository. The common intuition is that
-**custom, repo-aware tools** — semantic retrieval over a repo's own tests and
-helpers — should beat an agent that just runs `grep`. This project tests that
-intuition rigorously, holding everything fixed except the toolset.
-
-**Arms (identical agent, task prompt, and budget; only the tools differ):**
-
-| Arm | Tools | Role |
-|-----|-------|------|
-| **A1** | generic: `grep`, `read`, `bash` | strong Claude-Code-style baseline |
-| **A3** | semantic: `find_related_tests`, `find_helpers` (+ `read`) | treatment |
-
-**Why git history is the eval set.** For any real historical commit we already
-know the test the maintainer actually wrote and merged. We hide that test,
-regenerate it from the production diff with each arm, and score the result —
-a free, labeled eval. Restricting to commits **after the model's training
-cutoff** makes it contamination-aware.
-
-Repos: **dbt-core** and **pydantic** (Python / pytest). Backend: Claude
-(`claude-sonnet-4-6`), equal turn budget per arm.
+**Findtest adds value proportional to how much grep fails to navigate the test infrastructure.** On a codebase with a custom test framework, it produced a +39.7 alignment improvement with a confidence interval that excludes zero. On a codebase with standard conventions, grep was sufficient and findtest wasn't needed.
 
 ---
 
-## Headline finding: a clean null on custom retrieval tools
+## Background: what findtest is
 
-Across five different metrics, the semantic tools are **never the clear winner**.
+I built `findtest` — a semantic test retrieval MCP tool — for agentic coding at work. It maps source files to their associated tests using two signals: static import analysis and git co-modification history. When an AI agent is writing a new test, findtest answers:
 
-| Metric | A1 (grep) | A3 (semantic) | Verdict |
-|--------|-----------|---------------|---------|
-| Style-mimicry alignment | baseline | mean Δ **−8.8** [−28.6, +5.3] | against A3 |
-| Pairwise behavioral judge | 4/7 preferred | 2/7 preferred | against A3 |
-| **Resolvability** (real symbols) | 77.6 | 86.8 [Δ −0.4, +26.3] | favors A3, **n.s.** |
-| Indistinguishability (taste) | distinguish 0.375 | 0.667 | against A3 |
-| Taste rubric (5-axis, /5) | 1.88 | 1.83 | tied |
+- *Where do tests for this code live in this repo?*
+- *What fixtures and helpers are in scope?*
+- *What do the best existing tests for this module look like?*
 
-A1 (grep) matches or beats A3 on style, preference, taste rubric, and
-indistinguishability. A3's only edge — fewer hallucinated fixtures
-(resolvability) — is **not statistically significant** and shrank by half once a
-metric confound was fixed (below). This replicates across both repos and across
-single-shot example-conditioning variants. **It is an honest negative result.**
+At work it helped significantly. But internal results have a conflict-of-interest problem: I built the tool, I measured it, it worked. That's not evidence.
 
 ---
 
-## Why this is a *useful* null, not a boring one
+## The study
 
-The natural objection to a null is "your tools were weak." The more interesting
-reading is a **boundary condition** that the design lets us state precisely:
+### v1: the null result (the interesting part)
 
-> **Repo-aware retrieval tools fix what the model does not already know. Frontier
-> models have effectively memorized large, popular open-source repos like dbt and
-> pydantic — so the tools surface vocabulary the model already has, and add
-> nothing. The value of such tooling should therefore grow as a codebase moves
-> *out* of the training distribution.**
+I designed a rigorous open-source study. For each eval item: take a real git commit, hide the maintainer's test, have the agent regenerate it under two conditions — with and without findtest mounted — and score the output.
 
-This is a falsifiable hypothesis with a concrete prediction:
+**v1 result on dbt-core (n=7): findtest lost.**
 
-- **On in-distribution code (public, popular):** tools ≈ grep. *(Directly observed
-  here — two repos, multiple metrics, both retrieval and example-injection tools.)*
-- **On out-of-distribution code (unseen / private / niche frameworks):** the gap
-  should widen, because the model fabricates symbols it can't have memorized and a
-  tool that *enumerates the real surface* does something grep structurally cannot —
-  **you can't grep for a name you don't know exists.**
+- Behavioral judge preferred grep 4/7, findtest 2/7
+- Structural alignment: findtest −8.8 points behind grep
 
-![Repo-aware tool taste advantage by codebase: measured null on dbt/pydantic, projected gain on unseen code](reports/figures/taste-by-codebase.png)
+This was a negative result, not a failed experiment. The apparatus worked. The tool just didn't help.
 
-*Measured on **one identical taste rubric** (idiomatic / completeness / clarity /
-robustness / drop-in, 0/1/2, /10; n=12 each). Every repo-aware lever — co-mod (C),
-findtests (F), helper-catalog (H) — lands within noise of vanilla on both repos
-(helper-catalog is actually negative on dbt). The unseen-code bar is **projected
-from the mechanism**, not measured here; the realistic unseen case is measured
-privately in production.*
+### The diagnosis
 
-The practical implication for the field: **public benchmarks (SWE-bench and
-friends) likely *understate* the value of repo-aware tooling, because the model
-has already seen those repos.** A tool that looks useless on dbt may be exactly
-what helps on a codebase the model has never encountered. Testing the
-out-of-distribution half of this prediction rigorously (on code provably outside
-training) is the natural follow-up.
+Looking at the traces, I found the mechanism: **the old version of the target test file was still present in the worktree.** Grep found it in one hop. Both arms just copied its location, imports, and fixture style. The question findtest was built to answer — "where do tests for this code live?" — was already answered by the filesystem.
 
----
+The internal study had produced strong positive results using a different protocol: the test file was *deleted* before the agent ran, making test-location and fixture discovery a real problem. That difference explained everything.
 
-## When do these tools pay off? (discussion)
+### v2: the deletion protocol
 
-The null is a **boundary condition**, not "tools don't work":
+I redesigned the study around a single controlled change: **delete the associated test file from the worktree before each agent run.** Both arms get an identical deleted worktree. Three additional validity fixes were made to the harness (source leakage via the MCP server reading from HEAD rather than the worktree, git history accessible via worktree symlink, and production file misclassification in the deletion predicate).
 
-- **Familiarity explains it.** The model already knows these repos' vocabulary and
-  conventions — they're in its training data — so a tool that surfaces real
-  helpers or examples is redundant. The contamination control removes the specific
-  memorized *test*, but not the memorized *language*. (The proof it's familiarity
-  and not ineffectiveness: the same kind of tool helps on code the model has
-  **not** seen — see the prediction above.)
-- **The advantage belongs to unseen code, and it's durable while the code stays
-  private.** Running a model on a repo is *inference*, not training — it doesn't
-  learn your codebase by being used on it. So the gap persists as long as the code
-  stays out of the training set; the day it goes public, future models memorize it
-  and the gap decays (exactly what's happened for dbt/pydantic).
-- **Two failure modes, two tools — floor and ceiling.** A *helper-catalog* tool
-  enumerates the real vocabulary so the agent can't fabricate names → the **floor**
-  (code that *runs*). An *example-retrieval* tool (findtests) supplies real test
-  bodies so the output matches the repo's patterns → the **ceiling**
-  (code that's *drop-in / mergeable*). They target different problems: on familiar
-  code both are redundant; on unseen code the catalog stops crashes and the
-  examples are what actually make a test deliverable.
-- **Open question.** As base models get better at in-context exploration (reading
-  the repo via grep themselves), the floor may matter less even on unseen code.
-  The ceiling — matching a codebase's idioms closely enough to merge as-is — is
-  plausibly the more durable need. This is testable and not yet settled.
+Arms:
+- **A1 (control):** `Read`, `Grep`, `Glob`, `Bash` — no findtest
+- **A2 (treatment):** same tools + findtest MCP mounted, but not forced — voluntary adoption only
 
-## The methodological core (the real contribution)
+Voluntary adoption is itself a metric: if grep fails to find the deleted file, does the agent reach for findtest? That directly tests the mechanism.
 
-The result matters less than how it was obtained. Three things make it credible:
+### Three codebases
 
-### 1. Human-free taste evaluation — and how it evolved
-No human raters. **First approach:** use the repository's own **merged** tests as
-a revealed-acceptance panel (git history) and measure **indistinguishability** — a
-blind judge tries to tell the generated test from the real merged one.
-**Why we switched:** indistinguishability needs each repo's merged ground truth
-and isn't comparable *across* codebases. To put every codebase on **one ruler**,
-we adopted a **frozen 5-axis taste rubric** — *idiomatic match, completeness,
-clarity, robustness, drop-in readiness*, each scored 0/1/2 (max 10) — graded by
-**blind LLM judge agents**. The same instrument runs on every codebase, so taste
-scores are directly comparable. A companion **structural rubric** scores
-correctness (does the test reference real symbols and resolve?). Both rubrics are
-AI-designed, shipped in this repo
-([`taste_rubric.py`](src/atw/metrics/taste_rubric.py),
-[`resolvability.py`](src/atw/metrics/resolvability.py)), and fully reproducible —
-no human labels.
+The study ran across three repos chosen to span a complexity gradient:
 
-### 2. Most of the early "signal" was apparatus error — and was caught
-The comparison only became trustworthy after fixing silent failures, each found
-via **tool-call traces**:
-
-- **The arms were secretly identical.** A permissive auto-approve setting let the
-  treatment ignore its own MCP tools (0 tool calls) and behave exactly like the
-  grep arm. Fixed with deny-by-default tool restrictions.
-- **Tool leaks.** Unlisted tools and a spawned subagent escaped the restriction;
-  fixed by blocking every known tool not explicitly allowed.
-- **Budget too low → silent failures.** A turn cap made agents hit the limit
-  before writing a test; raised with a wall-clock guard.
-
-### 3. Confounds caught and corrected, not shipped
-- **Whole-file ground truth biased style scoring.** Comparing a *focused*
-  generated test to the maintainer's *entire* multi-test file penalized the
-  treatment for omitting file-level imports it didn't need. Switched to precision.
-- **Resolvability over-credited the treatment.** A naive fixture check treated the
-  tool's own outputs as real by construction while flagging a valid external
-  fixture as fake. De-biasing shrank the effect from **+17.5 (significant) to +9.2
-  (not significant)** — the "win" was half artifact.
-
-A separate result that **did** replicate and was then **retracted**: an early
-example-conditioning taste gain (+0.28) on dbt did not hold on pydantic
-(±0.2 swings at n≈12 are noise). It is reported as retracted rather than buried.
+| Codebase | Test infrastructure | Complexity |
+|----------|--------------------|----|
+| **pydantic** | Standard pytest, flat `tests/` directory | Low |
+| **dbt-core** | Standard pytest, 105 test directories, custom fixtures | Medium |
+| **SQLAlchemy** | Custom `sqlalchemy.testing` plugin, `@testing.combinations`, `assert_compile` | High |
 
 ---
 
-## What survives
+## Results
 
-- **Nativeness comes from agentic *exploration*, not example-injection.** The
-  agentic grep arm produces far more maintainer-indistinguishable tests than any
-  single-shot condition, even ones handed real repo examples. To look like the
-  repo, the agent has to explore it.
-- **Structural correctness saturates.** Whether a test references real symbols is
-  a solvable ceiling that both arms hit — not where tools differentiate.
-- **The bar for a useful coding-agent tool is higher than "surface relevant
-  files."** Current frontier models are strong enough at grep-based exploration
-  that, given the choice, they ignore custom retrieval tools — and when forced
-  onto them, output does not clearly improve *on code they already know*.
+### The gradient
 
-## Limitations
+| Metric | pydantic | dbt-core | SQLAlchemy |
+|--------|----------|----------|------------|
+| MCP adoption (A2) | **0%** | **100%** | **100%** |
+| Δ alignment A2 − A1 | −9.6 | +4.9 | **+39.7 ✓** |
+| Judge win-rate (A2) | 0.000 | 0.556 | 0.667 |
+| A1 correct location | 0/5 | 2/10 | **0/5** |
+| A2 correct location | 0/5 | 4/10 | **4/5** |
+| GT path surfaced (A2) | 1/5 | 7/10 | **4/5** |
+| Taste: A2 distinguish-rate | 0.75 | **0.900** | 1.0 |
 
-Small paired n (7–9 commits); nothing reaches significance. Single language
-(Python/pytest), k=1 sampling. Fixture/import realness is approximated
-statically, not by executing tests. The design is *substitution* (semantic tools
-*instead of* grep), a sharp contrast rather than the realistic augmentation case.
+*Alignment: structural AST match to ground truth (0–100). Judge: blinded pairwise LLM comparison. Location: did the agent declare the correct test file path. Taste/distinguish-rate: how often a blind judge correctly identified the AI-generated test (lower = more native-looking; 0.5 = indistinguishable from human).*
+
+✓ *SQLAlchemy alignment CI [31.6, 47.5] excludes zero at n=5.*
+
+### Reading the results
+
+**pydantic — null, as expected.** The agent never called findtest (0% adoption). Pydantic's flat `tests/` directory with standard pytest means the agent can infer conventions from sibling files alone. Grep is sufficient. A1 marginally preferred by judge.
+
+**dbt-core — findtest helps.** 100% voluntary adoption — every A2 run called findtest when grep couldn't find the deleted file. The agent found the correct test directory twice as often (4/10 vs 2/10). Judge split 5–4 in A2's favor. Taste nearly identical (0.909 vs 0.900), meaning findtest improved structure without making the output look more artificial.
+
+**SQLAlchemy — findtest clearly wins.** A1 couldn't navigate SQLAlchemy's custom `sqlalchemy.testing` framework at all (0/5 correct location, avg alignment 15.6). A2 found the correct directory 4/5 times and produced tests with +39.7 higher structural alignment. Judge preferred A2 in 3 of 3 decided cases. The agent called findtest on every run (avg 1.75 calls), found the right test module, and completed tasks in fewer turns than A1 (47.8 vs 61.0).
+
+### What findtest does and doesn't fix
+
+Findtest is a **navigation tool**: it solves *where to look* and *what fixtures exist*. It doesn't close the stylistic gap — taste scores on SQLAlchemy were 1.0 for both arms, meaning the custom `@testing.combinations` and `assert_compile` patterns remained detectable as AI-generated regardless. That gap requires style guidance (CLAUDE.md, project skills, in-context examples) rather than retrieval. The two are complementary, not the same thing.
 
 ---
 
-## Reproduce
+## The methodology contribution
+
+The deletion protocol is the transferable finding. Any evaluation of a retrieval tool for agentic coding that leaves the target file present in the worktree will underestimate the tool's value — grep trivially wins a question already answered by the filesystem. The controlled deletion design:
+
+1. Removes the information asymmetry that favors grep
+2. Makes voluntary adoption measurable (does the agent reach for the tool when grep fails?)
+3. Creates a fair test of the mechanism the tool was designed for
+
+The three-codebase gradient — null on flat/standard, positive on complex/custom — gives a principled answer to *when* semantic retrieval matters, which is more useful than a single pass/fail result.
+
+---
+
+## Repository layout
+
+| Path | What |
+|------|------|
+| `src/atw/retrieval/test_finder.py` | Findtest algorithm: import graph + co-modification history + quality scoring |
+| `src/atw/mcp/server.py` | MCP server exposing findtest as `find_related_tests` + `find_helpers` |
+| `src/atw/harness/sandbox.py` | Worktree setup with v2 deletion protocol and git-strip |
+| `src/atw/metrics/` | Alignment (AST), behavioral judge, conformity/taste, location discovery |
+| `src/atw/graph/` | Repo knowledge graph: import edges + co-modification pairs + quality scoring |
+| `scripts/run_experiment.py` | Run A1 vs A2 over a commit slice (resumable, rate-limit safe) |
+| `scripts/analyze_v2.py` | Statistical analysis: alignment CI, judge win-rate, adoption, location |
+| `scripts/run_conformity.py` | Taste/indistinguishability eval |
+| `docs/methodology.md` | Full experiment design, controls, metrics, disclosed decisions |
+| `docs/roadmap.md` | Full results history: v1 null, apparatus bugs found and fixed, v2 findings |
+| `docs/v2-runbook.md` | Self-contained guide to reproduce the study |
+| `tests/` | Unit tests for harness, retrieval, metrics |
+
+## Quickstart
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env                       # add your ANTHROPIC_API_KEY
+cp .env.example .env   # add ANTHROPIC_API_KEY for judge/conformity scoring
 
-python scripts/extract_commits.py          # mine post-cutoff labeled commits
-python scripts/build_graph.py              # test-to-code + co-modification graph
-python scripts/run_experiment.py --exp-id run1 --arms A1 A3
-python scripts/run_judge.py     --exp-id run1
-python scripts/make_report.py   --exp-id run1
+# Run the study on dbt-core (~$20 API credit, ~8h serial)
+ATW_REPO=dbt-core .venv/bin/python scripts/run_experiment.py \
+  --protocol v2 --n 25 --exp-id v2-dbt-core --arms A1 A2
+
+# Score and analyze
+ATW_REPO=dbt-core .venv/bin/python scripts/run_judge.py --exp-id v2-dbt-core --arm-a A1 --arm-b A2
+ATW_REPO=dbt-core .venv/bin/python scripts/score_location.py --exp-id v2-dbt-core
+ATW_REPO=dbt-core .venv/bin/python scripts/run_conformity.py --exp-id v2-dbt-core --arms A1 A2
+.venv/bin/python scripts/analyze_v2.py --exp-ids v2-dbt-core v2-pydantic v2-sqlalchemy
 ```
 
-The target repo is a one-line change in `src/atw/config.py`. See `docs/` for
-methodology, experiment design, the repo portfolio, prior art, and the taste
-study.
+See `docs/v2-runbook.md` for the complete reproduction guide.
 
-## Layout
+## Prior art
 
-| Path | What |
-|------|------|
-| `src/atw/` | the package (ingest, graph, retrieval, mcp, agent, harness, metrics, eval) |
-| `scripts/` | runnable CLIs (extract commits, build graph, run experiment, judge, report) |
-| `docs/` | methodology, experiment design, repos, prior art, taste study |
-| `reports/figures/` | result figures |
-| `tests/` | tests for this codebase |
-
----
-
-*Independent research. No proprietary code, data, or employer information is
-included in this repository.*
+Existing benchmarks (TestGenEval, SWT-Bench, TestExplora) evaluate *models* on test generation. This study evaluates a *retrieval tool*: does semantic test-mapping scaffolding change agentic outcomes when holding the model constant? The deletion-protocol design and voluntary-adoption metric are not present in published benchmarks as of June 2026.

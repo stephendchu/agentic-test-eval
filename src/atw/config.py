@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -24,10 +25,15 @@ REPOS = DATA / "repos"          # git clones: data/repos/<name>
 RESULTS = ROOT / "results"
 REPORTS = ROOT / "reports"
 
-# Active repo — swap here to change the whole experiment. Derived data is
-# namespaced by repo name so multiple codebases coexist (data/commits/<name>,
-# data/graph/<name>).
-ACTIVE_REPO = RepoSpec(name="dbt-core", url="https://github.com/dbt-labs/dbt-core")
+# Known repos — add here to onboard a new codebase. Switch via ATW_REPO env var.
+# Every v2 command: ATW_REPO=<name> .venv/bin/python scripts/...
+KNOWN_REPOS: dict[str, RepoSpec] = {
+    "dbt-core": RepoSpec(name="dbt-core", url="https://github.com/dbt-labs/dbt-core"),
+    "pydantic": RepoSpec(name="pydantic", url="https://github.com/pydantic/pydantic"),
+    "sqlalchemy": RepoSpec(name="sqlalchemy", url="https://github.com/sqlalchemy/sqlalchemy"),
+}
+
+ACTIVE_REPO = KNOWN_REPOS[os.environ.get("ATW_REPO", "dbt-core")]
 COMMITS = DATA / "commits" / ACTIVE_REPO.name
 GRAPH = DATA / "graph" / ACTIVE_REPO.name
 
@@ -49,7 +55,7 @@ class Config:
     # Maps to --max-turns. 25 was too low: agents hit the cap before writing the
     # test (turns=26, ok=False) on harder commits. 40 gives headroom; still equal
     # across arms so the comparison stays fair.
-    max_tool_calls: int = 40
+    max_tool_calls: int = 60
     max_tokens_per_rollout: int = 200_000
     rollouts_per_commit: int = 3  # k samples for variance
 

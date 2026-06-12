@@ -6,7 +6,9 @@ the same Toolbox as a real MCP server for the plug-and-play interface/demo.
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
+from pathlib import Path
 
 from atw.config import REPOS
 from atw.graph.build import load_graph
@@ -19,7 +21,14 @@ class Toolbox:
     def __init__(self, graph: RepoGraph | None = None):
         self.graph = graph or load_graph()
         self.scorer = QualityScorer(self.graph)
-        self.root = REPOS / self.graph.repo
+        # ATW_TOOL_ROOT (v2): repoints the server to the experiment worktree so
+        # sources are read from the deleted-file state, not the clone at HEAD.
+        # ATW_OBF_ROOT: vocabulary-rename experiment (legacy). ATW_TOOL_ROOT wins.
+        self.root = Path(
+            os.environ.get("ATW_TOOL_ROOT")
+            or os.environ.get("ATW_OBF_ROOT")
+            or (REPOS / self.graph.repo)
+        )
 
     def find_related_tests(self, changed_files: list[str], k: int = 5) -> dict:
         return {

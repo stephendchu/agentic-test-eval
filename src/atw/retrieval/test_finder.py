@@ -60,18 +60,30 @@ def find_related_tests(
     ranked.sort(key=lambda x: x[1], reverse=True)
 
     results = []
-    for i, (t, final, assoc, q) in enumerate(ranked[:k]):
+    sources_emitted = 0
+    for t, final, assoc, q in ranked[:k]:
+        file_path = root / t
+        exists = file_path.exists()
         try:
-            src = (root / t).read_text(encoding="utf-8", errors="replace")
+            src = file_path.read_text(encoding="utf-8", errors="replace") if exists else ""
         except OSError:
             src = ""
-        entry = {
+            exists = False
+
+        entry: dict = {
             "path": t,
             "score": round(final, 4),
             "quality": q,
+            "exists": exists,
             "test_functions": test_function_names(src),
         }
-        if i < source_k and src:
-            entry["source"] = src[:source_max_chars]  # the exemplar to adapt
+        if not exists:
+            # Returning the path is fair (historical knowledge is the tool's thesis);
+            # content must not flow — that would be ground-truth leakage in v2.
+            entry["note"] = "file not present in this working tree (known from repository history)"
+        elif sources_emitted < source_k:
+            entry["source"] = src[:source_max_chars]
+            sources_emitted += 1
+
         results.append(entry)
     return results
