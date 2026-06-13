@@ -1,5 +1,7 @@
 # agentic-test-eval
 
+[![Tests](https://github.com/stephendchu/agentic-test-eval/actions/workflows/tests.yml/badge.svg)](https://github.com/stephendchu/agentic-test-eval/actions/workflows/tests.yml)
+
 > **🔎 Validate** · part 1 of a 3-part series on measuring & governing AI in regulated domains —
 > **Validate (here)** · [📊 Measure](https://stephendchu.github.io/filing-event-eval/) · [🛡 Govern](https://stephendchu.github.io/assay/)
 
@@ -12,6 +14,8 @@ A controlled study of repository-aware test generation across three open-source 
 ## The one-line finding
 
 **Findtest adds value proportional to how much grep fails to navigate the test infrastructure.** On a codebase with a custom test framework, it produced a +39.7 alignment improvement with a confidence interval that excludes zero. On a codebase with standard conventions, grep was sufficient and findtest wasn't needed.
+
+![Findtest's alignment lift (A2 − A1) by codebase: pydantic −9.6 (flat tests/), dbt-core +4.9 (105 test dirs), SQLAlchemy +39.7 with 95% CI excluding zero (nested + custom plugin)](reports/figures/complexity-gradient.svg)
 
 ---
 
@@ -74,8 +78,6 @@ The study ran across three repos chosen to span a complexity gradient:
 
 The mechanism is **test-file discoverability** — how hard the right test is to locate through the repo's folder structure and depth. As that rises, grep fails and findtest's lift grows: null on a flat layout, decisive on a deep/custom one. dbt-core is the proof that *depth alone* drives it — standard pytest, but 105 test directories was enough.
 
-![Findtest's alignment lift (A2 − A1) by codebase: pydantic −9.6 (flat tests/), dbt-core +4.9 (105 test dirs), SQLAlchemy +39.7 with 95% CI excluding zero (nested + custom plugin)](reports/figures/complexity-gradient.svg)
-
 | Metric | pydantic | dbt-core | SQLAlchemy |
 |--------|----------|----------|------------|
 | MCP adoption (A2) | **0%** | **100%** | **100%** |
@@ -84,7 +86,7 @@ The mechanism is **test-file discoverability** — how hard the right test is to
 | A1 correct location | 0/5 | 2/10 | **0/5** |
 | A2 correct location | 0/5 | 4/10 | **4/5** |
 | GT path surfaced (A2) | 1/5 | 7/10 | **4/5** |
-| Taste: A2 distinguish-rate | 0.75 | **0.900** | 1.0 |
+| Taste: A2 distinguish-rate ↓ *(lower = more native)* | 0.75 | **0.900** | 1.0 |
 
 *Alignment: structural AST match to ground truth (0–100). Judge: blinded pairwise LLM comparison. Location: did the agent declare the correct test file path. Taste/distinguish-rate: how often a blind judge correctly identified the AI-generated test (lower = more native-looking; 0.5 = indistinguishable from human).*
 
@@ -113,6 +115,15 @@ The deletion protocol is the transferable finding. Any evaluation of a retrieval
 3. Creates a fair test of the mechanism the tool was designed for
 
 The three-codebase gradient — null on flat/standard, positive on complex/custom — gives a principled answer to *when* semantic retrieval matters, which is more useful than a single pass/fail result.
+
+---
+
+## Models & reproducibility
+
+- **Model under test — `claude-sonnet-4-6`, held constant across both arms.** Run through the Claude Code agent (`claude -p`) with identical tools, turn budget, and prompt for A1 and A2. The model is the constant; the only variable is whether findtest is mounted.
+- **Judge — `claude-sonnet-4-6`, same family as the generator.** Two guards against self-preference bias: pairwise comparisons are **blinded and order-randomized** (seeded), and — more importantly — the **headline metric is structural AST alignment, which is fully deterministic and model-independent.** The +39.7 result does not depend on the judge at all; the LLM judge win-rate is corroborating, not load-bearing.
+- **Contamination control:** only commits **after 2026-02-01** are mined — past the model's (~Jan 2026) training cutoff — so the maintainer's real test was never in training data. (This is why naming the model matters: the cutoff control is only meaningful relative to a specific model.)
+- **Honest caveats:** `sonnet-4-6` is a released alias, not a frozen dated snapshot; the LLM judge runs at the API's default sampling, not temperature 0 — mitigated by seeded blinding and k=3 rollouts per commit for variance. An independent judge from a different model family is the obvious next hardening step.
 
 ---
 

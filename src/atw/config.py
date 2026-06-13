@@ -43,8 +43,8 @@ class Config:
     repo: RepoSpec = field(default_factory=lambda: ACTIVE_REPO)
 
     # --- model ---------------------------------------------------------------
-    model: str = "claude-opus-4-8"
-    judge_model: str = "claude-opus-4-8"  # blinded judge; swap to a 2nd model for independence
+    model: str = "claude-sonnet-4-6"        # model under test, held constant across both arms
+    judge_model: str = "claude-sonnet-4-6"  # same family as the generator; the headline AST-alignment metric is model-independent. Swap to a different family to harden judge independence.
 
     # --- contamination control ----------------------------------------------
     # Only mine commits AFTER this date (after the model's training cutoff).
