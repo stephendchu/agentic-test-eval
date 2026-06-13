@@ -1,5 +1,8 @@
 # agentic-test-eval
 
+> **🔎 Validate** · part 1 of a 3-part series on measuring & governing AI in regulated domains —
+> **Validate (here)** · [📊 Measure](https://stephendchu.github.io/filing-event-eval/) · [🛡 Govern](https://stephendchu.github.io/assay/)
+
 > **Can a semantic retrieval tool help an AI agent write better tests — and when does it matter?**
 
 A controlled study of repository-aware test generation across three open-source Python codebases. Built to answer an honest question: does a custom tool that understands a repo's test history actually help, or does grep do the job just as well?
