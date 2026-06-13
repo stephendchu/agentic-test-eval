@@ -135,6 +135,18 @@ The three-codebase gradient — null on flat/standard, positive on complex/custo
 
 ---
 
+## Design decisions
+
+**Voluntary adoption, not forced MCP.** A2 has findtest mounted but never required — the agent uses it or doesn't. Forced adoption would show findtest *can* do the task; voluntary adoption shows whether it's actually needed. That's the mechanism question: does deletion starve grep enough to drive the agent toward the tool?
+
+**AST alignment as the primary metric, not the LLM judge.** The +39.7 result is structural and deterministic — it doesn't depend on the judge at all. LLM win-rate is corroborating. This matters because the model scoring the output is the same family as the model generating it; AST alignment breaks that self-reference.
+
+**Three codebases across a complexity gradient, not one.** A single result is a pass/fail with no generalization. Three codebases — flat/standard, deep/standard, deep/custom — give a principled *when*: value is proportional to how badly grep fails, not to the codebase's general difficulty.
+
+**Deletion protocol, not presence.** With the test file present, grep trivially answers the navigation question findtest was built for; both arms converge on the same file and the test becomes a style study, not a retrieval study. Deletion creates the actual problem. This is why v1's null was diagnostic, not a failure — it revealed a ceiling effect, not a broken tool.
+
+---
+
 ## Models & reproducibility
 
 - **Model under test — `claude-sonnet-4-6`, held constant across both arms.** Run through the Claude Code agent (`claude -p`) with identical tools, turn budget, and prompt for A1 and A2. The model is the constant; the only variable is whether findtest is mounted.
