@@ -64,11 +64,15 @@ Voluntary adoption is itself a metric: if grep fails to find the deleted file, d
 
 The study ran across three repos chosen to span a complexity gradient:
 
-| Codebase | Test infrastructure | Grep difficulty (folder + depth) |
-|----------|--------------------|----|
-| **pydantic** | Standard pytest, flat `tests/` directory | Low |
-| **dbt-core** | Standard pytest, 105 test directories, custom fixtures | Medium |
-| **SQLAlchemy** | Custom `sqlalchemy.testing` plugin, `@testing.combinations`, `assert_compile` | High |
+| Codebase | Test infrastructure | Test dirs under root | Max test-file depth | Grep difficulty |
+|----------|--------------------|----|----|----|
+| **pydantic** | Standard pytest, flat `tests/` directory | 18 | 1 | Low |
+| **dbt-core** | Standard pytest, 105 test directories, custom fixtures | 105 † | — † | Medium |
+| **SQLAlchemy** | Custom `sqlalchemy.testing` plugin, `@testing.combinations`, `assert_compile` | 34 | 2 | High |
+
+*"Test dirs under root" = directories containing tests beneath the repo's test root (`tests/` for pydantic/dbt-core, `test/` for SQLAlchemy). "Max test-file depth" = deepest nesting of a `test_*.py` / `*_test.py` file below that root (0 = sits directly in the root). pydantic and SQLAlchemy measured at current HEAD; full distribution in [`docs/repos.md`](docs/repos.md).*
+
+*† dbt-core's "105 test directories" is the figure recorded during the study. It is **not** re-measurable at HEAD: dbt-core's `main` has since been rewritten in Rust (no Python `tests/` tree remains), and the study config (`src/atw/config.py`) clones HEAD rather than pinning a SHA. Depth there should be read as the study-era Python layout, not today's repo.*
 
 ---
 
@@ -76,7 +80,9 @@ The study ran across three repos chosen to span a complexity gradient:
 
 ### The gradient
 
-The mechanism is **test-file discoverability** — how hard the right test is to locate through the repo's folder structure and depth. As that rises, grep fails and findtest's lift grows: null on a flat layout, decisive on a deep/custom one. dbt-core is the proof that *depth alone* drives it — standard pytest, but 105 test directories was enough.
+The mechanism is **test-file discoverability** — how hard the right test is to locate through the repo's folder structure and depth. As that rises, grep fails and findtest's lift grows: null on a flat layout, decisive on a deep/custom one. dbt-core is the proof that *breadth alone* drives it — standard pytest, but 105 test directories was enough.
+
+The three repos load that variable on *different* axes, which is why a single number doesn't capture it: pydantic is **shallow and narrow** (max depth 1, 18 dirs, 71 of 90 test files sitting directly in `tests/`), dbt-core is **broad** (105 directories), and SQLAlchemy is **moderately deep and gated** (max depth 2 with *zero* test files at the root — every test pushed at least one level down — behind a custom `sqlalchemy.testing` plugin). "Discoverability" is breadth + depth + framework idiosyncrasy, not any one of them.
 
 | Metric | pydantic | dbt-core | SQLAlchemy |
 |--------|----------|----------|------------|
