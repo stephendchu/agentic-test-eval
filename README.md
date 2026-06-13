@@ -167,3 +167,5 @@ See `docs/v2-runbook.md` for the complete reproduction guide.
 ## Prior art
 
 Existing benchmarks (TestGenEval, SWT-Bench, TestExplora) evaluate *models* on test generation. This study evaluates a *retrieval tool*: does semantic test-mapping scaffolding change agentic outcomes when holding the model constant? The deletion-protocol design and voluntary-adoption metric are not present in published benchmarks as of June 2026.
+
+> **Honest measurement is the brand.** Every repo in this three-part series reports its own null or limitation, not a vanity number — here, v1 was a clean negative result (findtest lost when grep could already find the test), and findtest is null on flat/standard codebases by design.
