@@ -60,6 +60,23 @@ Arms:
 
 Voluntary adoption is itself a metric: if grep fails to find the deleted file, does the agent reach for findtest? That directly tests the mechanism.
 
+```mermaid
+flowchart TD
+    COMMIT["real maintainer commit\npost-cutoff · 3 codebases"] --> WK["isolated git worktree\n.git link stripped"]
+    WK --> DEL["delete associated test file\nv2 deletion protocol"]
+    DEL --> SPLIT((" "))
+    SPLIT --> A1["A1 — control\nRead · Grep · Glob · Bash"]
+    SPLIT --> A2["A2 — treatment\nRead · Grep · Glob · Bash\n+ findtest MCP (voluntary)"]
+    A1 --> GEN1["generated test\n# target file: declared"]
+    A2 --> GEN2["generated test\n# target file: declared"]
+    GEN1 --> JUDGE["LLM judge\nblinded pairwise"]
+    GEN2 --> JUDGE
+    GEN1 --> METRICS["AST alignment · location · taste"]
+    GEN2 --> METRICS
+    JUDGE --> RESULT["win-rate · Δalignment\nadoption rate · per codebase"]
+    METRICS --> RESULT
+```
+
 ### Three codebases
 
 The study ran across three repos chosen to span a complexity gradient:
