@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="384" viewBox="0 0 700 384" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <rect width="700" height="384" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="40" y="36" font-size="19" font-weight="700" fill="#1b1f23">Findtest's value tracks how buried the test is in the folder structure</text>
+  <text x="40" y="57" font-size="13" fill="#586069">As test files get harder to locate by folder/depth, grep fails and findtest's lift (A2 − A1) climbs</text>
+
+  <!-- Y axis gridlines + labels (value v -> y = 300 - (v+15)*3.538) -->
+  <g stroke="#e1e4e8" stroke-width="1">
+    <line x1="90" y1="70"  x2="650" y2="70"/>
+    <line x1="90" y1="105" x2="650" y2="105"/>
+    <line x1="90" y1="141" x2="650" y2="141"/>
+    <line x1="90" y1="176" x2="650" y2="176"/>
+    <line x1="90" y1="212" x2="650" y2="212"/>
+    <line x1="90" y1="282" x2="650" y2="282"/>
+  </g>
+  <g font-size="11" fill="#959da5" text-anchor="end">
+    <text x="82" y="74">+50</text>
+    <text x="82" y="109">+40</text>
+    <text x="82" y="145">+30</text>
+    <text x="82" y="180">+20</text>
+    <text x="82" y="216">+10</text>
+    <text x="82" y="286">−10</text>
+  </g>
+  <text x="34" y="180" font-size="12" fill="#586069" text-anchor="middle" transform="rotate(-90 34 180)">alignment lift A2 − A1</text>
+
+  <!-- Zero baseline (value 0 -> y = 247) -->
+  <line x1="90" y1="247" x2="650" y2="247" stroke="#959da5" stroke-width="1.5"/>
+  <text x="82" y="251" font-size="11" fill="#586069" text-anchor="end" font-weight="600">0</text>
+
+  <!-- pydantic: -9.6  (bar from 247 down to 281) -->
+  <rect x="145" y="247" width="90" height="34" fill="#959da5"/>
+  <text x="190" y="298" font-size="13" fill="#586069" text-anchor="middle" font-weight="700">−9.6</text>
+
+  <!-- dbt-core: +4.9 (bar from 230 up to 247) -->
+  <rect x="325" y="230" width="90" height="17" fill="#34a853"/>
+  <text x="370" y="222" font-size="13" fill="#1b1f23" text-anchor="middle" font-weight="700">+4.9</text>
+
+  <!-- SQLAlchemy: +39.7 (bar from 107 up to 247), CI [31.6,47.5] whisker 135..79 -->
+  <rect x="505" y="107" width="90" height="140" fill="#188038"/>
+  <line x1="550" y1="79" x2="550" y2="135" stroke="#1b1f23" stroke-width="1.5"/>
+  <line x1="540" y1="79" x2="560" y2="79" stroke="#1b1f23" stroke-width="1.5"/>
+  <line x1="540" y1="135" x2="560" y2="135" stroke="#1b1f23" stroke-width="1.5"/>
+  <text x="550" y="99" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="700">+39.7</text>
+  <text x="610" y="86" font-size="11" fill="#188038" text-anchor="start" font-weight="600">95% CI</text>
+  <text x="610" y="100" font-size="11" fill="#188038" text-anchor="start" font-weight="600">excludes 0</text>
+
+  <!-- X labels: name + the structural driver (folder/depth) + adoption -->
+  <g text-anchor="middle">
+    <text x="190" y="324" font-size="14" font-weight="600" fill="#1b1f23">pydantic</text>
+    <text x="190" y="342" font-size="11" fill="#959da5">flat tests/ — found in 1 hop</text>
+    <text x="190" y="358" font-size="11" fill="#959da5">findtest adoption 0%</text>
+
+    <text x="370" y="324" font-size="14" font-weight="600" fill="#1b1f23">dbt-core</text>
+    <text x="370" y="342" font-size="11" fill="#959da5">105 test directories</text>
+    <text x="370" y="358" font-size="11" fill="#959da5">adoption 100% (standard pytest)</text>
+
+    <text x="550" y="324" font-size="14" font-weight="600" fill="#1b1f23">SQLAlchemy</text>
+    <text x="550" y="342" font-size="11" fill="#959da5">nested + custom test plugin</text>
+    <text x="550" y="358" font-size="11" fill="#959da5">adoption 100%</text>
+  </g>
+
+  <text x="40" y="378" font-size="11" fill="#959da5">dbt-core proves it: standard framework, but 105 test dirs → depth alone makes grep fail and findtest pay off.</text>
+</svg>

@@ -57,7 +57,7 @@ Voluntary adoption is itself a metric: if grep fails to find the deleted file, d
 
 The study ran across three repos chosen to span a complexity gradient:
 
-| Codebase | Test infrastructure | Complexity |
+| Codebase | Test infrastructure | Grep difficulty (folder + depth) |
 |----------|--------------------|----|
 | **pydantic** | Standard pytest, flat `tests/` directory | Low |
 | **dbt-core** | Standard pytest, 105 test directories, custom fixtures | Medium |
@@ -68,6 +68,10 @@ The study ran across three repos chosen to span a complexity gradient:
 ## Results
 
 ### The gradient
+
+The mechanism is **test-file discoverability** — how hard the right test is to locate through the repo's folder structure and depth. As that rises, grep fails and findtest's lift grows: null on a flat layout, decisive on a deep/custom one. dbt-core is the proof that *depth alone* drives it — standard pytest, but 105 test directories was enough.
+
+![Findtest's alignment lift (A2 − A1) by codebase: pydantic −9.6 (flat tests/), dbt-core +4.9 (105 test dirs), SQLAlchemy +39.7 with 95% CI excluding zero (nested + custom plugin)](reports/figures/complexity-gradient.svg)
 
 | Metric | pydantic | dbt-core | SQLAlchemy |
 |--------|----------|----------|------------|
