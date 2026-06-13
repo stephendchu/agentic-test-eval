@@ -33,6 +33,25 @@ At work it helped significantly. But internal results have a conflict-of-interes
 
 ## The study
 
+The pipeline, end to end — one real commit, two arms with identical budgets, scored against the maintainer's actual test:
+
+```mermaid
+flowchart TD
+    COMMIT["real maintainer commit<br/>post-cutoff · 3 codebases"] --> WK["isolated git worktree<br/>.git link stripped"]
+    WK --> DEL["delete associated test file<br/>v2 deletion protocol"]
+    DEL --> SPLIT((" "))
+    SPLIT --> A1["A1 — control<br/>Read · Grep · Glob · Bash"]
+    SPLIT --> A2["A2 — treatment<br/>Read · Grep · Glob · Bash<br/>+ findtest MCP (voluntary)"]
+    A1 --> GEN1["generated test<br/># target file: declared"]
+    A2 --> GEN2["generated test<br/># target file: declared"]
+    GEN1 --> JUDGE["LLM judge<br/>blinded pairwise"]
+    GEN2 --> JUDGE
+    GEN1 --> METRICS["AST alignment · location · taste"]
+    GEN2 --> METRICS
+    JUDGE --> RESULT["win-rate · Δalignment<br/>adoption rate · per codebase"]
+    METRICS --> RESULT
+```
+
 ### v1: the null result (the interesting part)
 
 I designed a rigorous open-source study. For each eval item: take a real git commit, hide the maintainer's test, have the agent regenerate it under two conditions — with and without findtest mounted — and score the output.
